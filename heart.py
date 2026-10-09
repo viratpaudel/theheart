@@ -1,6 +1,7 @@
 import math
 import random
 import turtle
+import tkinter.font as tkfont
 
 # "Love" in 50 languages
 WORDS = [
@@ -13,8 +14,11 @@ WORDS = [
     "mīlestība", "armastus", "grá", "cariad", "ást", "amo", "aroha",
 ]
 
-SCALE = 14
-FONT_FAMILY = "Arial"  # Tk falls back to a font with the right glyphs
+SCALE = 46
+FONT_FAMILY = "Georgia"
+FONT_STYLE = "italic"
+MAX_FONT_SIZE = 34
+MIN_FONT_SIZE = 22
 
 
 def heart_points(scale, steps=240):
@@ -27,102 +31,109 @@ def heart_points(scale, steps=240):
     return pts
 
 
-def inside(poly, px, py):
-    """Ray-casting point-in-polygon test."""
-    c = False
-    j = len(poly) - 1
+def outline_positions(words, poly, screen):
+    """Fit words edge-to-edge around the outline using their rendered widths."""
+    if not poly:
+        return [], MAX_FONT_SIZE
+
+    lengths = []
     for i in range(len(poly)):
-        xi, yi = poly[i]
-        xj, yj = poly[j]
-        if (yi > py) != (yj > py) and px < (xj - xi) * (py - yi) / (yj - yi) + xi:
-            c = not c
-        j = i
-    return c
+        x1, y1 = poly[i]
+        x2, y2 = poly[(i + 1) % len(poly)]
+        lengths.append(math.hypot(x2 - x1, y2 - y1))
 
+    total = sum(lengths)
+    font = tkfont.Font(root=screen.getcanvas(), family=FONT_FAMILY, size=MAX_FONT_SIZE, slant=FONT_STYLE)
 
-def pick_positions(n, poly):
-    """Random, well-spaced spots inside the heart."""
-    xs = [p[0] for p in poly]
-    ys = [p[1] for p in poly]
+    def point_at(distance):
+        distance %= total
+        traversed = 0.0
+        for idx, seg_len in enumerate(lengths):
+            if distance <= traversed + seg_len:
+                x1, y1 = poly[idx]
+                x2, y2 = poly[(idx + 1) % len(poly)]
+                ratio = 0.0 if seg_len == 0 else (distance - traversed) / seg_len
+                return x1 + (x2 - x1) * ratio, y1 + (y2 - y1) * ratio
+            traversed += seg_len
+        return poly[0]
+
+    for size in range(MAX_FONT_SIZE, MIN_FONT_SIZE - 1, -1):
+        font.configure(size=size)
+        widths = [font.measure(word) for word in words]
+        gap = 1
+        if sum(widths) + gap * len(words) <= total:
+            break
+    else:
+        font.configure(size=MIN_FONT_SIZE)
+        widths = [font.measure(word) for word in words]
+        gap = 0
+        if sum(widths) > total:
+            raise ValueError("The words do not fit around the heart outline at the minimum font size.")
+        size = MIN_FONT_SIZE
+
+    distance = random.random() * total
     spots = []
-    min_dist = 70
-    fails = 0
-    while len(spots) < n:
-        x = random.uniform(min(xs), max(xs))
-        y = random.uniform(min(ys), max(ys))
-        if inside(poly, x, y) and all(math.hypot(x - a, y - b) >= min_dist for a, b in spots):
-            spots.append((x, y))
-            fails = 0
-        else:
-            fails += 1
-            if fails > 400:  # too crowded -> allow tighter spacing
-                min_dist -= 3
-                fails = 0
-    return spots
+    angles = []
+    for width in widths:
+        middle = distance + width / 2
+        x, y = point_at(middle)
+        before_x, before_y = point_at(middle - 2)
+        after_x, after_y = point_at(middle + 2)
+        spots.append((x, y))
+        angles.append(math.degrees(math.atan2(after_y - before_y, after_x - before_x)))
+        distance += width + gap
+    return spots, size, angles
 
 
 def main():
     screen = turtle.Screen()
-    screen.setup(820, 820)
+    screen.setup(1800, 1800)
     screen.bgcolor("black")
     screen.title("Love in 50 languages")
     screen.tracer(0)
 
-    # Heart outline
-    outline = turtle.Turtle(visible=False)
-    outline.speed(0)
-    outline.pensize(5)
-    outline.color("red", "#2b0000")
+    # Build the heart only from the words themselves.
     full = heart_points(SCALE)
-    outline.penup()
-    outline.goto(full[0])
-    outline.pendown()
-    outline.begin_fill()
-    for p in full[1:]:
-        outline.goto(p)
-    outline.end_fill()
-    screen.update()
-
-    # Words stay a bit inside the outline
-    inner = heart_points(SCALE * 0.85)
-    spots = pick_positions(len(WORDS), inner)
 
     pen = turtle.Turtle(visible=False)   # final, permanent text
     pop = turtle.Turtle(visible=False)   # temporary text for the pop animation
     for t in (pen, pop):
         t.penup()
-        t.color("red")
+        t.color("#ff4f91")
 
     words = WORDS[:]
     random.shuffle(words)
+    spots, text_size, angles = outline_positions(words, full, screen)
 
-    def write_at(t, text, x, y, size):
-        t.goto(x, y - size * 0.7)
-        t.write(text, align="center", font=(FONT_FAMILY, size, "bold"))
+    def write_at(t, text, x, y, size, angle):
+        t.setheading(angle)
+        t.goto(x, y)
+        t.write(text, align="center", font=(FONT_FAMILY, max(1, round(size)), FONT_STYLE))
 
     def show_word(i):
         if i >= len(words):
             return
         x, y = spots[i]
-        target = random.randint(14, 20)
-        # grow, overshoot a little, settle -> "pop"
-        sizes = [4, 8, 12, target + 6, target + 3, target]
-        state = {"k": 0}
+        angle = angles[i]
+        size = text_size
+        steps = 24
 
-        def step():
-            pop.clear()
-            write_at(pop, words[i], x, y, sizes[state["k"]])
-            screen.update()
-            state["k"] += 1
-            if state["k"] < len(sizes):
-                screen.ontimer(step, 35)
-            else:
+        def step(frame):
+            if frame > steps:
                 pop.clear()
-                write_at(pen, words[i], x, y, target)
+                write_at(pen, words[i], x, y, size, angle)
                 screen.update()
-                screen.ontimer(lambda: show_word(i + 1), 350)
+                screen.ontimer(lambda: show_word(i + 1), 140)
+                return
 
-        step()
+            eased = 1 - (1 - frame / steps) ** 3
+            px_size = 1 + (size - 1) * eased
+            pop.clear()
+            write_at(pop, words[i], x, y, px_size, angle)
+            screen.update()
+            screen.ontimer(lambda: step(frame + 1), 16)
+
+        step(0)
 
     show_word(0)
     screen.mainloop()
