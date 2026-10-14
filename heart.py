@@ -3,7 +3,7 @@ import random
 import turtle
 import tkinter.font as tkfont
 
-# "Love" in 50 languages
+# "Love" in 50 language
 WORDS = [
     "love", "amor", "amour", "Liebe", "amore", "liefde", "kärlek",
     "kjærlighet", "kærlighed", "rakkaus", "miłość", "láska", "любовь",
