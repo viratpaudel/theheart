@@ -20,6 +20,15 @@ FONT_STYLE = "italic"
 MAX_FONT_SIZE = 34
 MIN_FONT_SIZE = 22
 
+# Color palettes: (background, text_color)
+PALETTES = [
+    ("black", "#ff4f91"),    # Classic pink on black
+    ("black", "#ff6b6b"),    # Coral on black
+    ("#1a0a2e", "#e040fb"),  # Purple neon
+    ("#0d1b2a", "#00d4ff"),  # Cyan on dark navy
+    ("#1b0000", "#ff2222"),  # Deep red
+]
+
 
 def heart_points(scale, steps=240):
     pts = []
@@ -86,9 +95,11 @@ def outline_positions(words, poly, screen):
 
 
 def main():
+    bg_color, text_color = random.choice(PALETTES)
+
     screen = turtle.Screen()
     screen.setup(1800, 1800)
-    screen.bgcolor("black")
+    screen.bgcolor(bg_color)
     screen.title("Love in 50 languages")
     screen.tracer(0)
 
@@ -99,7 +110,7 @@ def main():
     pop = turtle.Turtle(visible=False)   # temporary text for the pop animation
     for t in (pen, pop):
         t.penup()
-        t.color("#ff4f91")
+        t.color(text_color)
 
     words = WORDS[:]
     random.shuffle(words)
