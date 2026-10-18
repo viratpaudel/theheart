@@ -1,3 +1,4 @@
+import argparse
 import math
 import random
 import turtle
@@ -95,7 +96,15 @@ def outline_positions(words, poly, screen):
 
 
 def main():
-    bg_color, text_color = random.choice(PALETTES)
+    parser = argparse.ArgumentParser(description="Love in 50 languages — heart animation")
+    parser.add_argument("--palette", type=int, default=None,
+                        help=f"Color palette index (0-{len(PALETTES)-1}). Random if omitted.")
+    args = parser.parse_args()
+
+    if args.palette is not None:
+        bg_color, text_color = PALETTES[args.palette % len(PALETTES)]
+    else:
+        bg_color, text_color = random.choice(PALETTES)
 
     screen = turtle.Screen()
     screen.setup(1800, 1800)
