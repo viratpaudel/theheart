@@ -109,8 +109,20 @@ def main():
     screen = turtle.Screen()
     screen.setup(1800, 1800)
     screen.bgcolor(bg_color)
-    screen.title("Love in 50 languages")
+    screen.title("Love in 50 languages (Press Esc or Q to exit)")
     screen.tracer(0)
+
+    def close_app(*_):
+        try:
+            screen.bye()
+        except turtle.Terminator:
+            pass
+
+    screen.listen()
+    screen.onkey(close_app, "Escape")
+    screen.onkey(close_app, "q")
+    screen.onkey(close_app, "Q")
+    screen.onscreenclick(close_app)
 
     # Build the heart only from the words themselves.
     full = heart_points(SCALE)
@@ -139,19 +151,22 @@ def main():
         steps = 24
 
         def step(frame):
-            if frame > steps:
-                pop.clear()
-                write_at(pen, words[i], x, y, size, angle)
-                screen.update()
-                screen.ontimer(lambda: show_word(i + 1), 140)
-                return
+            try:
+                if frame > steps:
+                    pop.clear()
+                    write_at(pen, words[i], x, y, size, angle)
+                    screen.update()
+                    screen.ontimer(lambda: show_word(i + 1), 140)
+                    return
 
-            eased = 1 - (1 - frame / steps) ** 3
-            px_size = 1 + (size - 1) * eased
-            pop.clear()
-            write_at(pop, words[i], x, y, px_size, angle)
-            screen.update()
-            screen.ontimer(lambda: step(frame + 1), 16)
+                eased = 1 - (1 - frame / steps) ** 3
+                px_size = 1 + (size - 1) * eased
+                pop.clear()
+                write_at(pop, words[i], x, y, px_size, angle)
+                screen.update()
+                screen.ontimer(lambda: step(frame + 1), 16)
+            except turtle.Terminator:
+                return
 
         step(0)
 
