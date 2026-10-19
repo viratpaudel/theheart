@@ -99,7 +99,20 @@ def main():
     parser = argparse.ArgumentParser(description="Love in 50 languages — heart animation")
     parser.add_argument("--palette", type=int, default=None,
                         help=f"Color palette index (0-{len(PALETTES)-1}). Random if omitted.")
+    parser.add_argument("--speed", choices=["slow", "normal", "fast", "instant"], default="normal",
+                        help="Animation playback speed (slow, normal, fast, instant)")
+    parser.add_argument("--scale", type=float, default=1.0,
+                        help="Scale multiplier for heart outline (0.5 to 2.0, default 1.0)")
     args = parser.parse_args()
+
+    scale = int(SCALE * max(0.5, min(args.scale, 2.0)))
+    speed_delays = {
+        "slow": (220, 24),
+        "normal": (140, 16),
+        "fast": (60, 8),
+        "instant": (0, 0),
+    }
+    word_delay, frame_delay = speed_delays[args.speed]
 
     if args.palette is not None:
         bg_color, text_color = PALETTES[args.palette % len(PALETTES)]
@@ -125,7 +138,7 @@ def main():
     screen.onscreenclick(close_app)
 
     # Build the heart only from the words themselves.
-    full = heart_points(SCALE)
+    full = heart_points(scale)
 
     pen = turtle.Turtle(visible=False)   # final, permanent text
     pop = turtle.Turtle(visible=False)   # temporary text for the pop animation
@@ -148,6 +161,13 @@ def main():
         x, y = spots[i]
         angle = angles[i]
         size = text_size
+
+        if args.speed == "instant":
+            write_at(pen, words[i], x, y, size, angle)
+            screen.update()
+            show_word(i + 1)
+            return
+
         steps = 24
 
         def step(frame):
@@ -156,7 +176,7 @@ def main():
                     pop.clear()
                     write_at(pen, words[i], x, y, size, angle)
                     screen.update()
-                    screen.ontimer(lambda: show_word(i + 1), 140)
+                    screen.ontimer(lambda: show_word(i + 1), word_delay)
                     return
 
                 eased = 1 - (1 - frame / steps) ** 3
@@ -164,7 +184,7 @@ def main():
                 pop.clear()
                 write_at(pop, words[i], x, y, px_size, angle)
                 screen.update()
-                screen.ontimer(lambda: step(frame + 1), 16)
+                screen.ontimer(lambda: step(frame + 1), frame_delay)
             except turtle.Terminator:
                 return
 
