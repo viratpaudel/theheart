@@ -136,7 +136,9 @@ def main():
         step(0)
 
     show_word(0)
-    screen.mainloop()
+    screen.listen()
+    screen.onkey(screen.bye, "Escape")
+    screen.exitonclick()
 
 
 if __name__ == "__main__":
