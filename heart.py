@@ -103,6 +103,8 @@ def main():
                         help="Animation playback speed (slow, normal, fast, instant)")
     parser.add_argument("--scale", type=float, default=1.0,
                         help="Scale multiplier for heart outline (0.5 to 2.0, default 1.0)")
+    parser.add_argument("--message", type=str, default=None,
+                        help="Optional message or dedication displayed in the center of the heart")
     args = parser.parse_args()
 
     scale = int(SCALE * max(0.5, min(args.scale, 2.0)))
@@ -157,6 +159,14 @@ def main():
 
     def show_word(i):
         if i >= len(words):
+            if args.message:
+                center_pen = turtle.Turtle(visible=False)
+                center_pen.penup()
+                center_pen.color(text_color)
+                center_pen.goto(0, -15)
+                msg_font_size = max(18, int(26 * (scale / SCALE)))
+                center_pen.write(args.message, align="center", font=(FONT_FAMILY, msg_font_size, "bold"))
+                screen.update()
             return
         x, y = spots[i]
         angle = angles[i]
