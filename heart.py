@@ -1,10 +1,11 @@
 import argparse
 import math
+import os
 import random
 import turtle
 import tkinter.font as tkfont
 
-# "Love" in 50 language
+# "Love" in 50 languages
 WORDS = [
     "love", "amor", "amour", "Liebe", "amore", "liefde", "kärlek",
     "kjærlighet", "kærlighed", "rakkaus", "miłość", "láska", "любовь",
@@ -14,6 +15,43 @@ WORDS = [
     "soyayya", "ፍቅር", "szerelem", "dragoste", "љубав", "ljubav", "meilė",
     "mīlestība", "armastus", "grá", "cariad", "ást", "amo", "aroha",
 ]
+
+LANGUAGE_GROUPS = {
+    "romance": ["amor", "amour", "amore", "dragoste", "amo"],
+    "germanic": ["love", "Liebe", "liefde", "kärlek", "kjærlighet", "kærlighed", "ást"],
+    "slavic": ["miłość", "láska", "любовь", "любов", "љубав", "ljubav"],
+    "asian": ["愛", "사랑", "爱", "ความรัก", "tình yêu", "cinta", "pag-ibig", "aroha"],
+    "indic": ["प्यार", "ভালোবাসা", "محبت", "माया", "காதல்", "ప్రేమ", "प्रेम"],
+    "african": ["upendo", "uthando", "ìfẹ́", "soyayya", "ፍቅር"],
+    "semitic": ["אהבה", "حب", "عشق"],
+    "finno-ugric": ["rakkaus", "szerelem", "armastus"],
+    "baltic": ["meilė", "mīlestība"],
+    "celtic": ["grá", "cariad"],
+}
+
+
+def resolve_word_list(words_arg=None, family_arg=None):
+    """Resolve word collection based on CLI overrides or language family filters."""
+    if words_arg:
+        if os.path.exists(words_arg):
+            with open(words_arg, "r", encoding="utf-8") as f:
+                loaded = [w.strip() for w in f.read().splitlines() if w.strip()]
+        else:
+            loaded = [w.strip() for w in words_arg.split(",") if w.strip()]
+        if loaded:
+            result = loaded[:]
+            while len(result) < 40:
+                result.extend(loaded)
+            return result[:50]
+
+    if family_arg and family_arg in LANGUAGE_GROUPS:
+        subset = LANGUAGE_GROUPS[family_arg]
+        result = subset[:]
+        while len(result) < 40:
+            result.extend(subset)
+        return result[:50]
+
+    return WORDS[:]
 
 SCALE = 46
 FONT_FAMILY = "Georgia"
@@ -138,6 +176,10 @@ def main():
                         help="Render twinkling ambient particle sparkles around the heart perimeter")
     parser.add_argument("--pulse", action="store_true",
                         help="Enable continuous rhythmic cardiac lub-dub pulsing animation")
+    parser.add_argument("--words", type=str, default=None,
+                        help="Custom comma-separated words or path to text file")
+    parser.add_argument("--family", choices=["all"] + list(LANGUAGE_GROUPS.keys()), default="all",
+                        help="Filter word list by linguistic family")
     args = parser.parse_args()
 
     scale = int(SCALE * max(0.5, min(args.scale, 2.0)))
@@ -190,7 +232,7 @@ def main():
         t.penup()
         t.color(text_color)
 
-    words = WORDS[:]
+    words = resolve_word_list(args.words, args.family)
     random.shuffle(words)
     spots, text_size, angles = outline_positions(words, full, screen)
 
