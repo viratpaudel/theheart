@@ -41,6 +41,25 @@ def heart_points(scale, steps=240):
     return pts
 
 
+def generate_sparkle_points(poly, count=40, jitter=35, rng=None):
+    """Generate ambient sparkle coordinates radiating along the heart contour."""
+    if not poly or count <= 0:
+        return []
+    if rng is None:
+        rng = random.Random()
+    sparkles = []
+    poly_len = len(poly)
+    for _ in range(count):
+        idx = rng.randint(0, poly_len - 1)
+        base_x, base_y = poly[idx]
+        offset_dist = rng.uniform(8, jitter)
+        angle = rng.uniform(0, 2 * math.pi)
+        sx = base_x + offset_dist * math.cos(angle)
+        sy = base_y + offset_dist * math.sin(angle)
+        sparkles.append((sx, sy, rng.choice(["✦", "•", "✨", "*"]), rng.randint(8, 14)))
+    return sparkles
+
+
 def outline_positions(words, poly, screen):
     """Fit words edge-to-edge around the outline using their rendered widths."""
     if not poly:
@@ -105,6 +124,8 @@ def main():
                         help="Scale multiplier for heart outline (0.5 to 2.0, default 1.0)")
     parser.add_argument("--message", type=str, default=None,
                         help="Optional message or dedication displayed in the center of the heart")
+    parser.add_argument("--sparkles", action="store_true",
+                        help="Render twinkling ambient particle sparkles around the heart perimeter")
     args = parser.parse_args()
 
     scale = int(SCALE * max(0.5, min(args.scale, 2.0)))
@@ -141,6 +162,15 @@ def main():
 
     # Build the heart only from the words themselves.
     full = heart_points(scale)
+
+    if args.sparkles:
+        sparkle_pen = turtle.Turtle(visible=False)
+        sparkle_pen.penup()
+        sparkle_pen.color(text_color)
+        sparkle_pts = generate_sparkle_points(full, count=36, jitter=40)
+        for sx, sy, sym, sz in sparkle_pts:
+            sparkle_pen.goto(sx, sy)
+            sparkle_pen.write(sym, align="center", font=(FONT_FAMILY, sz, "normal"))
 
     pen = turtle.Turtle(visible=False)   # final, permanent text
     pop = turtle.Turtle(visible=False)   # temporary text for the pop animation
