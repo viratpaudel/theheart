@@ -60,6 +60,16 @@ def generate_sparkle_points(poly, count=40, jitter=35, rng=None):
     return sparkles
 
 
+def compute_pulse_scale(t_phase):
+    """Simulate a cardiac lub-dub waveform for rhythmic pulsation (0.0 <= t_phase < 1.0)."""
+    t = t_phase % 1.0
+    if t < 0.2:
+        return 1.0 + 0.15 * math.sin(t / 0.2 * math.pi)
+    elif 0.25 <= t < 0.45:
+        return 1.0 + 0.09 * math.sin((t - 0.25) / 0.2 * math.pi)
+    return 1.0
+
+
 def outline_positions(words, poly, screen):
     """Fit words edge-to-edge around the outline using their rendered widths."""
     if not poly:
@@ -126,6 +136,8 @@ def main():
                         help="Optional message or dedication displayed in the center of the heart")
     parser.add_argument("--sparkles", action="store_true",
                         help="Render twinkling ambient particle sparkles around the heart perimeter")
+    parser.add_argument("--pulse", action="store_true",
+                        help="Enable continuous rhythmic cardiac lub-dub pulsing animation")
     args = parser.parse_args()
 
     scale = int(SCALE * max(0.5, min(args.scale, 2.0)))
@@ -189,14 +201,38 @@ def main():
 
     def show_word(i):
         if i >= len(words):
-            if args.message:
-                center_pen = turtle.Turtle(visible=False)
-                center_pen.penup()
-                center_pen.color(text_color)
-                center_pen.goto(0, -15)
-                msg_font_size = max(18, int(26 * (scale / SCALE)))
-                center_pen.write(args.message, align="center", font=(FONT_FAMILY, msg_font_size, "bold"))
-                screen.update()
+            msg_pen = turtle.Turtle(visible=False)
+            msg_pen.penup()
+            msg_pen.color(text_color)
+            center_text = args.message if args.message else "♥"
+            base_msg_size = max(18, int(26 * (scale / SCALE))) if args.message else max(24, int(34 * (scale / SCALE)))
+
+            def draw_center(scale_multiplier):
+                try:
+                    msg_pen.clear()
+                    msg_pen.goto(0, -15 if args.message else -20)
+                    msg_pen.write(
+                        center_text,
+                        align="center",
+                        font=(FONT_FAMILY, max(1, int(base_msg_size * scale_multiplier)), "bold")
+                    )
+                    screen.update()
+                except turtle.Terminator:
+                    return
+
+            draw_center(1.0)
+
+            if args.pulse:
+                pulse_step = [0]
+                def run_pulse():
+                    try:
+                        pulse_step[0] = (pulse_step[0] + 1) % 40
+                        factor = compute_pulse_scale(pulse_step[0] / 40.0)
+                        draw_center(factor)
+                        screen.ontimer(run_pulse, 35)
+                    except turtle.Terminator:
+                        return
+                screen.ontimer(run_pulse, 200)
             return
         x, y = spots[i]
         angle = angles[i]
