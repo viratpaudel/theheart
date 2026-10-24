@@ -108,6 +108,86 @@ def compute_pulse_scale(t_phase):
     return 1.0
 
 
+def outline_positions_headless(words, poly, font_size=26):
+    """Headless word positioning without GUI/Tkinter dependencies."""
+    if not poly:
+        return [], font_size, []
+    lengths = []
+    for i in range(len(poly)):
+        x1, y1 = poly[i]
+        x2, y2 = poly[(i + 1) % len(poly)]
+        lengths.append(math.hypot(x2 - x1, y2 - y1))
+    total = sum(lengths)
+
+    def point_at(distance):
+        distance %= total
+        traversed = 0.0
+        for idx, seg_len in enumerate(lengths):
+            if distance <= traversed + seg_len:
+                x1, y1 = poly[idx]
+                x2, y2 = poly[(idx + 1) % len(poly)]
+                ratio = 0.0 if seg_len == 0 else (distance - traversed) / seg_len
+                return x1 + (x2 - x1) * ratio, y1 + (y2 - y1) * ratio
+            traversed += seg_len
+        return poly[0]
+
+    widths = [max(18, len(word) * (font_size * 0.58)) for word in words]
+    distance = 0.0
+    spots = []
+    angles = []
+    gap = 2
+    for width in widths:
+        middle = distance + width / 2
+        x, y = point_at(middle)
+        before_x, before_y = point_at(middle - 2)
+        after_x, after_y = point_at(middle + 2)
+        spots.append((x, y))
+        angles.append(math.degrees(math.atan2(after_y - before_y, after_x - before_x)))
+        distance += width + gap
+    return spots, font_size, angles
+
+
+def render_to_svg(words, scale, bg_color, text_color, message=None, include_sparkles=False):
+    """Render heart graphic and words into an SVG vector string."""
+    width, height = 1600, 1600
+    cx, cy = width / 2, height / 2
+    poly = heart_points(scale)
+    spots, size, angles = outline_positions_headless(words, poly, font_size=26)
+
+    svg_parts = [
+        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" width="100%" height="100%">',
+        f'  <rect width="100%" height="100%" fill="{bg_color}" />',
+        f'  <g transform="translate({cx}, {cy}) scale(1, -1)">',
+    ]
+
+    if include_sparkles:
+        sparkle_pts = generate_sparkle_points(poly, count=45, jitter=45)
+        for sx, sy, sym, sz in sparkle_pts:
+            svg_parts.append(
+                f'    <text x="{sx:.1f}" y="{sy:.1f}" fill="{text_color}" opacity="0.6" '
+                f'font-family="{FONT_FAMILY}" font-size="{sz}" text-anchor="middle">{sym}</text>'
+            )
+
+    for word, (x, y), angle in zip(words, spots, angles):
+        clean_word = word.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        svg_parts.append(
+            f'    <text transform="translate({x:.2f}, {y:.2f}) rotate({angle:.2f})" '
+            f'fill="{text_color}" font-family="{FONT_FAMILY}" font-style="italic" '
+            f'font-size="{size}" text-anchor="middle" dominant-baseline="central">{clean_word}</text>'
+        )
+
+    if message:
+        clean_msg = message.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        svg_parts.append(
+            f'    <text x="0" y="15" fill="{text_color}" font-family="{FONT_FAMILY}" '
+            f'font-size="32" font-weight="bold" text-anchor="middle" dominant-baseline="central">{clean_msg}</text>'
+        )
+
+    svg_parts.append('  </g>')
+    svg_parts.append('</svg>')
+    return '\n'.join(svg_parts)
+
+
 def outline_positions(words, poly, screen):
     """Fit words edge-to-edge around the outline using their rendered widths."""
     if not poly:
@@ -180,6 +260,8 @@ def main():
                         help="Custom comma-separated words or path to text file")
     parser.add_argument("--family", choices=["all"] + list(LANGUAGE_GROUPS.keys()), default="all",
                         help="Filter word list by linguistic family")
+    parser.add_argument("--export-svg", type=str, default=None,
+                        help="Export high-resolution vector SVG to specified file path and exit")
     args = parser.parse_args()
 
     scale = int(SCALE * max(0.5, min(args.scale, 2.0)))
@@ -195,6 +277,22 @@ def main():
         bg_color, text_color = PALETTES[args.palette % len(PALETTES)]
     else:
         bg_color, text_color = random.choice(PALETTES)
+
+    if args.export_svg:
+        words = resolve_word_list(args.words, args.family)
+        random.shuffle(words)
+        svg_content = render_to_svg(
+            words=words,
+            scale=scale,
+            bg_color=bg_color,
+            text_color=text_color,
+            message=args.message,
+            include_sparkles=args.sparkles,
+        )
+        with open(args.export_svg, "w", encoding="utf-8") as f:
+            f.write(svg_content)
+        print(f"Exported heart vector graphics to {args.export_svg}")
+        return
 
     screen = turtle.Screen()
     screen.setup(1800, 1800)
