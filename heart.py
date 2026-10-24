@@ -68,6 +68,14 @@ PALETTES = [
     ("#1b0000", "#ff2222"),  # Deep red
 ]
 
+PRESETS = {
+    "classic": {"palette": 0, "sparkles": False, "pulse": False, "message": None, "speed": "normal"},
+    "valentine": {"palette": 0, "sparkles": True, "pulse": True, "message": "Happy Valentine's Day", "speed": "normal"},
+    "neon": {"palette": 2, "sparkles": True, "pulse": True, "message": None, "speed": "fast"},
+    "cyberpunk": {"palette": 3, "sparkles": True, "pulse": True, "message": "<3", "speed": "fast"},
+    "ruby": {"palette": 4, "sparkles": True, "pulse": True, "message": "Forever", "speed": "normal"},
+}
+
 
 def heart_points(scale, steps=240):
     pts = []
@@ -260,9 +268,24 @@ def main():
                         help="Custom comma-separated words or path to text file")
     parser.add_argument("--family", choices=["all"] + list(LANGUAGE_GROUPS.keys()), default="all",
                         help="Filter word list by linguistic family")
+    parser.add_argument("--preset", choices=list(PRESETS.keys()), default=None,
+                        help=f"Quick style preset: {', '.join(PRESETS.keys())}")
     parser.add_argument("--export-svg", type=str, default=None,
                         help="Export high-resolution vector SVG to specified file path and exit")
     args = parser.parse_args()
+
+    if args.preset:
+        preset = PRESETS[args.preset]
+        if args.palette is None:
+            args.palette = preset["palette"]
+        if not args.sparkles:
+            args.sparkles = preset["sparkles"]
+        if not args.pulse:
+            args.pulse = preset["pulse"]
+        if args.message is None:
+            args.message = preset["message"]
+        if args.speed == "normal" and preset["speed"] != "normal":
+            args.speed = preset["speed"]
 
     scale = int(SCALE * max(0.5, min(args.scale, 2.0)))
     speed_delays = {
