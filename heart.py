@@ -67,6 +67,9 @@ PALETTES = [
     ("#1a0a2e", "#e040fb"),  # Purple neon
     ("#0d1b2a", "#00d4ff"),  # Cyan on dark navy
     ("#1b0000", "#ff2222"),  # Deep red
+    ("#051610", "#10b981"),  # Emerald night
+    ("#190c00", "#f59e0b"),  # Amber glow
+    ("#0a0a14", "#818cf8"),  # Indigo twilight
 ]
 
 PRESETS = {
@@ -75,6 +78,9 @@ PRESETS = {
     "neon": {"palette": 2, "sparkles": True, "pulse": True, "message": None, "speed": "fast"},
     "cyberpunk": {"palette": 3, "sparkles": True, "pulse": True, "message": "<3", "speed": "fast"},
     "ruby": {"palette": 4, "sparkles": True, "pulse": True, "message": "Forever", "speed": "normal"},
+    "emerald": {"palette": 5, "sparkles": True, "pulse": True, "message": "Harmony", "speed": "normal"},
+    "amber": {"palette": 6, "sparkles": True, "pulse": True, "message": "Warmth", "speed": "normal"},
+    "twilight": {"palette": 7, "sparkles": True, "pulse": True, "message": "Midnight", "speed": "fast"},
 }
 
 
