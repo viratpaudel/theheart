@@ -116,6 +116,14 @@ def compute_pulse_scale(t_phase):
     return 1.0
 
 
+def compute_pulse_scale_bpm(t_seconds, bpm=60):
+    """Calculate heart pulse scale factor based on beats per minute."""
+    clamped_bpm = max(30, min(float(bpm), 240))
+    cycle_duration = 60.0 / clamped_bpm
+    phase = (t_seconds % cycle_duration) / cycle_duration
+    return compute_pulse_scale(phase)
+
+
 def outline_positions_headless(words, poly, font_size=26):
     """Headless word positioning without GUI/Tkinter dependencies."""
     if not poly:
@@ -264,6 +272,8 @@ def main():
                         help="Render twinkling ambient particle sparkles around the heart perimeter")
     parser.add_argument("--pulse", action="store_true",
                         help="Enable continuous rhythmic cardiac lub-dub pulsing animation")
+    parser.add_argument("--bpm", type=float, default=60.0,
+                        help="Cardiac pulse beats per minute when pulse is enabled (30-240, default 60)")
     parser.add_argument("--words", type=str, default=None,
                         help="Custom comma-separated words or path to text file")
     parser.add_argument("--family", choices=["all"] + list(LANGUAGE_GROUPS.keys()), default="all",
@@ -386,13 +396,18 @@ def main():
             draw_center(1.0)
 
             if args.pulse:
+                bpm_val = max(30, min(float(args.bpm), 240))
+                cycle_ms = (60.0 / bpm_val) * 1000.0
+                frame_interval_ms = 35
+                total_frames = max(10, int(cycle_ms / frame_interval_ms))
                 pulse_step = [0]
+
                 def run_pulse():
                     try:
-                        pulse_step[0] = (pulse_step[0] + 1) % 40
-                        factor = compute_pulse_scale(pulse_step[0] / 40.0)
+                        pulse_step[0] = (pulse_step[0] + 1) % total_frames
+                        factor = compute_pulse_scale(pulse_step[0] / float(total_frames))
                         draw_center(factor)
-                        screen.ontimer(run_pulse, 35)
+                        screen.ontimer(run_pulse, frame_interval_ms)
                     except turtle.Terminator:
                         return
                 screen.ontimer(run_pulse, 200)
