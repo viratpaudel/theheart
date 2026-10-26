@@ -163,24 +163,40 @@ def outline_positions_headless(words, poly, font_size=26):
     return spots, font_size, angles
 
 
-def render_to_svg(words, scale, bg_color, text_color, message=None, include_sparkles=False):
+def render_to_svg(words, scale, bg_color, text_color, message=None, include_sparkles=False, gradient_colors=None):
     """Render heart graphic and words into an SVG vector string."""
     width, height = 1600, 1600
     cx, cy = width / 2, height / 2
     poly = heart_points(scale)
     spots, size, angles = outline_positions_headless(words, poly, font_size=26)
 
+    fill_target = text_color
     svg_parts = [
         f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" width="100%" height="100%">',
+    ]
+
+    if gradient_colors and len(gradient_colors) >= 2:
+        c1, c2 = gradient_colors[0], gradient_colors[1]
+        svg_parts.extend([
+            '  <defs>',
+            '    <linearGradient id="heartGrad" x1="0%" y1="0%" x2="100%" y2="100%">',
+            f'      <stop offset="0%" stop-color="{c1}" />',
+            f'      <stop offset="100%" stop-color="{c2}" />',
+            '    </linearGradient>',
+            '  </defs>',
+        ])
+        fill_target = "url(#heartGrad)"
+
+    svg_parts.extend([
         f'  <rect width="100%" height="100%" fill="{bg_color}" />',
         f'  <g transform="translate({cx}, {cy}) scale(1, -1)">',
-    ]
+    ])
 
     if include_sparkles:
         sparkle_pts = generate_sparkle_points(poly, count=45, jitter=45)
         for sx, sy, sym, sz in sparkle_pts:
             svg_parts.append(
-                f'    <text x="{sx:.1f}" y="{sy:.1f}" fill="{text_color}" opacity="0.6" '
+                f'    <text x="{sx:.1f}" y="{sy:.1f}" fill="{fill_target}" opacity="0.6" '
                 f'font-family="{FONT_FAMILY}" font-size="{sz}" text-anchor="middle">{sym}</text>'
             )
 
@@ -188,14 +204,14 @@ def render_to_svg(words, scale, bg_color, text_color, message=None, include_spar
         clean_word = word.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
         svg_parts.append(
             f'    <text transform="translate({x:.2f}, {y:.2f}) rotate({angle:.2f})" '
-            f'fill="{text_color}" font-family="{FONT_FAMILY}" font-style="italic" '
+            f'fill="{fill_target}" font-family="{FONT_FAMILY}" font-style="italic" '
             f'font-size="{size}" text-anchor="middle" dominant-baseline="central">{clean_word}</text>'
         )
 
     if message:
         clean_msg = message.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
         svg_parts.append(
-            f'    <text x="0" y="15" fill="{text_color}" font-family="{FONT_FAMILY}" '
+            f'    <text x="0" y="15" fill="{fill_target}" font-family="{FONT_FAMILY}" '
             f'font-size="32" font-weight="bold" text-anchor="middle" dominant-baseline="central">{clean_msg}</text>'
         )
 
@@ -282,6 +298,8 @@ def main():
                         help=f"Quick style preset: {', '.join(PRESETS.keys())}")
     parser.add_argument("--export-svg", type=str, default=None,
                         help="Export high-resolution vector SVG to specified file path and exit")
+    parser.add_argument("--svg-gradient", action="store_true",
+                        help="Apply dual-tone linear gradient to exported SVG vector graphics")
     args = parser.parse_args()
 
     if args.preset:
@@ -314,6 +332,7 @@ def main():
     if args.export_svg:
         words = resolve_word_list(args.words, args.family)
         random.shuffle(words)
+        grad_colors = (text_color, "#ffffff") if args.svg_gradient else None
         svg_content = render_to_svg(
             words=words,
             scale=scale,
@@ -321,6 +340,7 @@ def main():
             text_color=text_color,
             message=args.message,
             include_sparkles=args.sparkles,
+            gradient_colors=grad_colors,
         )
         with open(args.export_svg, "w", encoding="utf-8") as f:
             f.write(svg_content)
