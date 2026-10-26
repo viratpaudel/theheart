@@ -1,4 +1,5 @@
 import argparse
+import json
 import math
 import os
 import random
@@ -220,6 +221,32 @@ def render_to_svg(words, scale, bg_color, text_color, message=None, include_spar
     return '\n'.join(svg_parts)
 
 
+def export_heart_metadata_json(words, scale, spots, angles, bg_color, text_color, output_path=None):
+    """Serialize heart geometric layout, word coordinates, and palette configuration to JSON."""
+    payload = {
+        "scale": scale,
+        "word_count": len(words),
+        "palette": {
+            "background": bg_color,
+            "text": text_color,
+        },
+        "elements": [
+            {
+                "index": i,
+                "word": w,
+                "position": {"x": round(pos[0], 2), "y": round(pos[1], 2)},
+                "angle": round(ang, 2),
+            }
+            for i, (w, pos, ang) in enumerate(zip(words, spots, angles))
+        ],
+    }
+    json_text = json.dumps(payload, indent=2, ensure_ascii=False)
+    if output_path:
+        with open(output_path, "w", encoding="utf-8") as f:
+            f.write(json_text)
+    return json_text
+
+
 def outline_positions(words, poly, screen):
     """Fit words edge-to-edge around the outline using their rendered widths."""
     if not poly:
@@ -300,6 +327,8 @@ def main():
                         help="Export high-resolution vector SVG to specified file path and exit")
     parser.add_argument("--svg-gradient", action="store_true",
                         help="Apply dual-tone linear gradient to exported SVG vector graphics")
+    parser.add_argument("--export-json", type=str, default=None,
+                        help="Export layout geometry, word coordinates, and angles to JSON and exit")
     args = parser.parse_args()
 
     if args.preset:
@@ -345,6 +374,23 @@ def main():
         with open(args.export_svg, "w", encoding="utf-8") as f:
             f.write(svg_content)
         print(f"Exported heart vector graphics to {args.export_svg}")
+        return
+
+    if args.export_json:
+        words = resolve_word_list(args.words, args.family)
+        random.shuffle(words)
+        poly = heart_points(scale)
+        spots, size, angles = outline_positions_headless(words, poly, font_size=26)
+        export_heart_metadata_json(
+            words=words,
+            scale=scale,
+            spots=spots,
+            angles=angles,
+            bg_color=bg_color,
+            text_color=text_color,
+            output_path=args.export_json,
+        )
+        print(f"Exported layout metadata to {args.export_json}")
         return
 
     screen = turtle.Screen()
