@@ -9,9 +9,12 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 from heart import (
     heart_points,
     compute_pulse_scale,
+    compute_pulse_scale_bpm,
     generate_sparkle_points,
     resolve_word_list,
     render_to_svg,
+    export_heart_metadata_json,
+    outline_positions_headless,
     PRESETS,
     PALETTES,
     WORDS,
@@ -85,6 +88,36 @@ class TestHeartCore(unittest.TestCase):
         # Escaped message
         self.assertIn("Unit Test &lt;Heart&gt;", svg)
         self.assertIn("fill=\"#ff4f91\"", svg)
+
+    def test_compute_pulse_scale_bpm(self):
+        scale_60 = compute_pulse_scale_bpm(t_seconds=0.08, bpm=60)
+        self.assertGreater(scale_60, 1.0)
+        self.assertLessEqual(scale_60, 1.15)
+        # Clamped limits verification
+        scale_low = compute_pulse_scale_bpm(0.08, bpm=10)
+        self.assertGreater(scale_low, 1.0)
+
+    def test_render_to_svg_gradient(self):
+        sample_words = ["Love", "Peace"]
+        svg = render_to_svg(
+            words=sample_words,
+            scale=30,
+            bg_color="#000000",
+            text_color="#ff4f91",
+            gradient_colors=("#ff007f", "#7928ca"),
+        )
+        self.assertIn("<linearGradient id=\"heartGrad\"", svg)
+        self.assertIn("stop-color=\"#ff007f\"", svg)
+        self.assertIn("fill=\"url(#heartGrad)\"", svg)
+
+    def test_export_heart_metadata_json(self):
+        words = ["amor", "liebe", "amour"]
+        poly = heart_points(scale=20, steps=30)
+        spots, _, angles = outline_positions_headless(words, poly)
+        json_str = export_heart_metadata_json(words, 20, spots, angles, "#000000", "#ffffff")
+        self.assertIn('"scale": 20', json_str)
+        self.assertIn('"word_count": 3', json_str)
+        self.assertIn('"word": "amor"', json_str)
 
 
 if __name__ == "__main__":
