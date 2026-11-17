@@ -36,7 +36,7 @@ python heart.py
 
 **Instant Valentine theme with sparkles, pulse, and custom BPM:**
 ```bash
-python heart.py --preset valentine --bpm 75
+python heart.py --preset valentine --bpm 75 --sparkles --pulse
 ```
 
 **Export vector SVG with dual-tone gradient fill:**
